@@ -16,6 +16,10 @@ import type {
   RoomStatusDTO,
   PrivatePlayerStateDTO,
 } from "./game-types";
+import SockJS from 'sockjs-client';
+// @ts-ignore
+import { Stomp } from 'stompjs/lib/stomp.js';
+import { Client } from '@stomp/stompjs';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
@@ -69,60 +73,103 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(async (code: string, pId: string) => {
-    // Use @stomp/stompjs with native WebSocket
-    const { Client } = await import("@stomp/stompjs");
+    // Helper to setup subscriptions (shared logic)
+    const setupSubscriptions = (client: any) => {
+      const subscribeFn = (dest: string, cb: any) => client.subscribe(dest, cb);
 
-    // Convert http(s) to ws(s) for WebSocket URL
-    const wsProtocol = BACKEND_URL.startsWith("https") ? "wss" : "ws";
-    const wsHost = BACKEND_URL.replace(/^https?:\/\//, "");
-    const wsUrl = `${wsProtocol}://${wsHost}/ws`;
+      subscribeFn(`/topic/room/${code}`, (msg: any) => {
+        const data: RoomStatusDTO = JSON.parse(msg.body);
+        setPlayers(data.players);
+        setGameState(data.gameState);
+        setMessage(data.message);
 
-    const client = new Client({
-      brokerURL: wsUrl,
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      connectHeaders: {
-        playerId: pId,
-      },
-      debug: () => {}, // Disable debug logging
-      onConnect: () => {
-        setIsConnected(true);
-        stompClientRef.current = client;
+        // Reset voting state on new round
+        if (["ROUND_1", "ROUND_2", "ROUND_3"].includes(data.gameState)) {
+          setHasVoted(false);
+          setSelectedVote(null);
+        }
+      });
 
-        // Subscribe to public room channel
-        client.subscribe(`/topic/room/${code}`, (msg) => {
-          const data: RoomStatusDTO = JSON.parse(msg.body);
-          setPlayers(data.players);
-          setGameState(data.gameState);
-          setMessage(data.message);
+      subscribeFn(`/user/queue/game`, (msg: any) => {
+        const data: PrivatePlayerStateDTO = JSON.parse(msg.body);
+        setMyRole(data.role);
+        setCategory(data.category);
+        setSecretWord(data.secretWord);
+      });
+    };
 
-          // Reset voting state on new round
-          if (["ROUND_1", "ROUND_2", "ROUND_3"].includes(data.gameState)) {
-            setHasVoted(false);
-            setSelectedVote(null);
-          }
-        });
+    // Option B: Native WebSocket
+    const connectNative = () => {
+      console.log("Attempting Option B: Native WebSocket");
 
-        // Subscribe to private player channel
-        client.subscribe(`/user/queue/game`, (msg) => {
-          const data: PrivatePlayerStateDTO = JSON.parse(msg.body);
-          setMyRole(data.role);
-          setCategory(data.category);
-          setSecretWord(data.secretWord);
-        });
-      },
-      onStompError: (frame) => {
-        console.error("[v0] STOMP error:", frame.headers["message"]);
-        setIsConnected(false);
-      },
-      onWebSocketError: (event) => {
-        console.error("[v0] WebSocket error:", event);
-        setIsConnected(false);
-      },
-    });
+      const wsProtocol = BACKEND_URL.startsWith("https") ? "wss" : "ws";
+      const wsHost = BACKEND_URL.replace(/^https?:\/\//, "");
+      const wsUrl = `${wsProtocol}://${wsHost}/ws-native`;
 
-    client.activate();
+      const client = new Client({
+        brokerURL: wsUrl,
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+        connectHeaders: {
+          playerId: pId,
+        },
+        debug: () => { }, // Disable debug logging
+        onConnect: () => {
+          console.log("Conectado exitosamente via Native WS");
+          setIsConnected(true);
+          stompClientRef.current = client;
+          setupSubscriptions(client);
+        },
+        onStompError: (frame) => {
+          console.error("[v0] STOMP error (Native):", frame.headers["message"]);
+          setIsConnected(false);
+        },
+        onWebSocketError: (event) => {
+          console.error("[v0] WebSocket error (Native):", event);
+          setIsConnected(false);
+        },
+      });
+
+      client.activate();
+    };
+
+    // Option A: SockJS
+    console.log("Attempting Option A: SockJS");
+    try {
+      const socket = new SockJS(`${BACKEND_URL}/ws`);
+      const stompClient = Stomp.over(socket);
+      stompClient.debug = () => { };
+
+      stompClient.connect(
+        { playerId: pId },
+        (frame: any) => {
+          console.log("Connected via SockJS (Option A)");
+          setIsConnected(true);
+
+          // Adapt stompjs to match @stomp/stompjs interface used in the app
+          const adaptedClient = {
+            subscribe: (dest: string, cb: any) => stompClient.subscribe(dest, cb),
+            publish: ({ destination, body }: { destination: string; body: string }) =>
+              stompClient.send(destination, {}, body),
+            deactivate: () => {
+              stompClient.disconnect(() => { });
+            },
+            connected: true,
+          };
+
+          stompClientRef.current = adaptedClient;
+          setupSubscriptions(stompClient);
+        },
+        (error: any) => {
+          console.error("SockJS connection failed, switching to Native:", error);
+          connectNative();
+        }
+      );
+    } catch (e) {
+      console.error("SockJS setup failed, switching to Native:", e);
+      connectNative();
+    }
   }, []);
 
   // Create room
