@@ -72,7 +72,7 @@ export function LobbyView() {
                   </span>
                 </div>
                 {index === 0 && (
-                  <Crown className="w-5 h-5 text-accent" title="Host" />
+                  <Crown className="w-5 h-5 text-accent" aria-label="Host" />
                 )}
               </div>
             ))}
