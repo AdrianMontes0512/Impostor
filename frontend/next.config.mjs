@@ -5,3 +5,5 @@ const nextConfig = {
     unoptimized: true, // Firebase Hosting no soporta la optimización de imágenes nativa de Next.js
   },
 };
+
+export default nextConfig;
