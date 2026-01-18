@@ -9,7 +9,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'El Impostor - Juego Multijugador',
-  description: 'Descubre quién es el impostor antes de que sea demasiado tarde. Juego de palabras y deducción para grupos.',
+  description: 'Descubre quién miente entre tus amigos en este emocionante juego de deducción social',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body className={`font-sans antialiased`}>
         {children}
         <Analytics />

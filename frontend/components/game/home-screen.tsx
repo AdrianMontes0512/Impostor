@@ -1,141 +1,171 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Label } from "@/components/ui/label"
-import { useSocket } from "@/hooks/use-socket"
-import { Eye, Users, Sparkles } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useGame } from "@/lib/game-context";
+import { Eye, Users, Loader2 } from "lucide-react";
 
 export function HomeScreen() {
-  const [username, setUsername] = useState("")
-  const [roomCode, setRoomCode] = useState("")
-  const [activeTab, setActiveTab] = useState("create")
-  const { createRoom, joinRoom, isConnected } = useSocket()
+  const { createRoom, joinRoom } = useGame();
+  const [username, setUsername] = useState("");
+  const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [mode, setMode] = useState<"select" | "create" | "join">("select");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCreateRoom = () => {
-    if (username.trim().length >= 2) {
-      createRoom(username.trim())
+  const handleCreate = async () => {
+    if (!username.trim()) {
+      setError("Ingresa tu nombre");
+      return;
     }
-  }
+    setIsLoading(true);
+    setError(null);
+    try {
+      await createRoom(username.trim());
+    } catch {
+      setError("Error al crear la sala. Intenta de nuevo.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleJoinRoom = () => {
-    if (username.trim().length >= 2 && roomCode.trim().length >= 4) {
-      joinRoom(roomCode.trim().toUpperCase(), username.trim())
+  const handleJoin = async () => {
+    if (!username.trim()) {
+      setError("Ingresa tu nombre");
+      return;
     }
-  }
+    if (!roomCodeInput.trim()) {
+      setError("Ingresa el código de sala");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      await joinRoom(roomCodeInput.trim().toUpperCase(), username.trim());
+    } catch {
+      setError("Error al unirse. Verifica el código.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-8">
-        {/* Logo/Title */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-              <Eye className="w-8 h-8 text-primary" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mb-2">
+            <Eye className="w-10 h-10 text-primary-foreground" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
-            El Impostor
-          </h1>
-          <p className="text-muted-foreground text-balance">
-            Descubre quién es el impostor antes de que sea demasiado tarde
-          </p>
-        </div>
+          <CardTitle className="text-3xl font-bold text-balance">El Impostor</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Descubre quién miente entre tus amigos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {mode === "select" && (
+            <div className="space-y-3">
+              <Button
+                onClick={() => setMode("create")}
+                className="w-full h-12 text-lg bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <Users className="w-5 h-5 mr-2" />
+                Crear Sala
+              </Button>
+              <Button
+                onClick={() => setMode("join")}
+                variant="outline"
+                className="w-full h-12 text-lg border-border hover:bg-secondary"
+              >
+                Unirse a Sala
+              </Button>
+            </div>
+          )}
 
-        {/* Connection Status */}
-        <div className="flex items-center justify-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full transition-colors ${
-              isConnected ? "bg-primary animate-pulse" : "bg-destructive"
-            }`}
-          />
-          <span className="text-sm text-muted-foreground">
-            {isConnected ? "Conectado" : "Conectando..."}
-          </span>
-        </div>
-
-        {/* Main Card */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl text-card-foreground">Comienza a jugar</CardTitle>
-            <CardDescription>Crea una sala o únete con un código</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="create" className="gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  Crear Sala
-                </TabsTrigger>
-                <TabsTrigger value="join" className="gap-2">
-                  <Users className="w-4 h-4" />
-                  Unirse
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="space-y-4">
-                {/* Username field - shared between both tabs */}
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-foreground">Nombre de usuario</Label>
-                  <Input
-                    id="username"
-                    placeholder="Tu nombre en el juego"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    maxLength={15}
-                    className="bg-input border-border focus:border-primary"
-                  />
-                </div>
-
-                <TabsContent value="create" className="mt-0 space-y-4">
-                  <Button
-                    onClick={handleCreateRoom}
-                    disabled={username.trim().length < 2 || !isConnected}
-                    className="w-full h-12 text-base font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
-                  >
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    Crear Nueva Sala
-                  </Button>
-                </TabsContent>
-
-                <TabsContent value="join" className="mt-0 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="roomCode" className="text-foreground">Código de sala</Label>
-                    <Input
-                      id="roomCode"
-                      placeholder="Ej: ABCD"
-                      value={roomCode}
-                      onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                      maxLength={6}
-                      className="bg-input border-border focus:border-primary uppercase tracking-widest text-center text-lg font-mono"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleJoinRoom}
-                    disabled={
-                      username.trim().length < 2 ||
-                      roomCode.trim().length < 4 ||
-                      !isConnected
-                    }
-                    className="w-full h-12 text-base font-medium bg-accent text-accent-foreground hover:bg-accent/90 transition-all"
-                  >
-                    <Users className="w-5 h-5 mr-2" />
-                    Unirse a la Sala
-                  </Button>
-                </TabsContent>
+          {mode === "create" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Tu nombre</label>
+                <Input
+                  placeholder="Ej: Juan"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-12 bg-input border-border"
+                  maxLength={20}
+                />
               </div>
-            </Tabs>
-          </CardContent>
-        </Card>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMode("select");
+                    setError(null);
+                  }}
+                  className="flex-1 border-border"
+                  disabled={isLoading}
+                >
+                  Volver
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Crear"}
+                </Button>
+              </div>
+            </div>
+          )}
 
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground">
-          Mínimo 3 jugadores para iniciar una partida
-        </p>
-      </div>
+          {mode === "join" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Tu nombre</label>
+                <Input
+                  placeholder="Ej: María"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-12 bg-input border-border"
+                  maxLength={20}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Código de sala</label>
+                <Input
+                  placeholder="Ej: ABCD12"
+                  value={roomCodeInput}
+                  onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+                  className="h-12 bg-input border-border font-mono text-center text-lg tracking-widest"
+                  maxLength={6}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setMode("select");
+                    setError(null);
+                  }}
+                  className="flex-1 border-border"
+                  disabled={isLoading}
+                >
+                  Volver
+                </Button>
+                <Button
+                  onClick={handleJoin}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unirse"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
 }

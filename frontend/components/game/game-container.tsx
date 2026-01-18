@@ -1,26 +1,45 @@
-"use client"
+"use client";
 
-import { useGame } from "@/contexts/game-context"
-import { HomeScreen } from "./home-screen"
-import { Lobby } from "./lobby"
-import { GameBoard } from "./game-board"
-import { ResultsScreen } from "./results-screen"
+import { useGame } from "@/lib/game-context";
+import { HomeScreen } from "./home-screen";
+import { LobbyView } from "./lobby-view";
+import { RoleAssignmentView } from "./role-assignment-view";
+import { CategoryView } from "./category-view";
+import { WordView } from "./word-view";
+import { GameBoardView } from "./game-board-view";
+import { ResultsView } from "./results-view";
 
 export function GameContainer() {
-  const { gameState } = useGame()
-  const { phase } = gameState
+  const { roomCode, gameState } = useGame();
 
-  switch (phase) {
-    case "home":
-      return <HomeScreen />
-    case "lobby":
-      return <Lobby />
-    case "playing":
-    case "voting":
-      return <GameBoard />
-    case "results":
-      return <ResultsScreen />
+  // If not in a room, show home screen
+  if (!roomCode) {
+    return <HomeScreen />;
+  }
+
+  // Render based on game state
+  switch (gameState) {
+    case "LOBBY":
+      return <LobbyView />;
+    
+    case "ASSIGN_ROLES":
+      return <RoleAssignmentView />;
+    
+    case "CATEGORY_INPUT":
+      return <CategoryView />;
+    
+    case "WORD_INPUT":
+      return <WordView />;
+    
+    case "ROUND_1":
+    case "ROUND_2":
+    case "ROUND_3":
+      return <GameBoardView />;
+    
+    case "FINISHED":
+      return <ResultsView />;
+    
     default:
-      return <HomeScreen />
+      return <LobbyView />;
   }
 }
