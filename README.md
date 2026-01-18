@@ -1,0 +1,2 @@
+# Impostor
+Jueguito del impostor 
