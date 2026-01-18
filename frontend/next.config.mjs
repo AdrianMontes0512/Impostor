@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  output: 'export', // <--- ESTO ES LO MÁS IMPORTANTE
   images: {
-    unoptimized: true,
+    unoptimized: true, // Firebase Hosting no soporta la optimización de imágenes nativa de Next.js
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
+next.config.mjs
