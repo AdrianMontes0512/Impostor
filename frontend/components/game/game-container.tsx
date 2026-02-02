@@ -21,24 +21,22 @@ export function GameContainer() {
   switch (gameState) {
     case "LOBBY":
       return <LobbyView />;
-    
+
     case "ASSIGN_ROLES":
       return <RoleAssignmentView />;
-    
+
     case "CATEGORY_INPUT":
       return <CategoryView />;
-    
+
     case "WORD_INPUT":
       return <WordView />;
-    
-    case "ROUND_1":
-    case "ROUND_2":
-    case "ROUND_3":
+
+    case "VOTING":
       return <GameBoardView />;
-    
+
     case "FINISHED":
       return <ResultsView />;
-    
+
     default:
       return <LobbyView />;
   }

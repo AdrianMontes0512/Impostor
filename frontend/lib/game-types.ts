@@ -5,9 +5,7 @@ export type GameState =
   | "ASSIGN_ROLES"
   | "CATEGORY_INPUT"
   | "WORD_INPUT"
-  | "ROUND_1"
-  | "ROUND_2"
-  | "ROUND_3"
+  | "VOTING"
   | "FINISHED";
 
 export type PlayerRole = "PLAYER" | "IMPOSTOR" | "SPECTATOR";
@@ -23,6 +21,9 @@ export interface RoomStatusDTO {
   players: Player[];
   gameState: GameState;
   message: string;
+  currentRound?: number;
+  maxRounds?: number;
+  impostorName?: string;
 }
 
 export interface PrivatePlayerStateDTO {
@@ -58,29 +59,32 @@ export interface JoinRoomRequest {
 export interface GameContextType {
   // Connection state
   isConnected: boolean;
-  
+
   // Room state
   roomCode: string | null;
   players: Player[];
   gameState: GameState;
   message: string;
-  
+  currentRound: number;
+  maxRounds: number;
+  impostorName: string | null;
+
   // Player state
   playerId: string | null;
   username: string | null;
   isHost: boolean;
-  
+
   // Private state
   myRole: PlayerRole | null;
   category: string | null;
   secretWord: string | null;
-  
+
   // Voting state
   selectedVote: string | null;
   hasVoted: boolean;
-  
+
   // Actions
-  createRoom: (username: string) => Promise<void>;
+  createRoom: (username: string, rounds: number) => Promise<void>;
   joinRoom: (roomCode: string, username: string) => Promise<void>;
   startGame: () => void;
   submitCategory: (value: string) => void;

@@ -5,28 +5,26 @@ import { useGame } from "@/lib/game-context";
 import { Trophy, Skull, RotateCcw, Eye, Users } from "lucide-react";
 
 export function ResultsView() {
-  const { message, resetGame } = useGame();
+  const { message, resetGame, impostorName } = useGame();
 
   // Determine winner based on message
-  const impostorWins = message.toLowerCase().includes("impostor wins") || 
-                       message.toLowerCase().includes("survived");
-  
+  const impostorWins = message.toLowerCase().includes("impostor wins") ||
+    message.toLowerCase().includes("survived");
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
-      
+
       <div className="relative z-10 w-full max-w-md">
-        <div className={`rounded-2xl p-8 text-center space-y-6 border ${
-          impostorWins 
-            ? "bg-gradient-to-b from-destructive/20 to-card border-destructive/50" 
-            : "bg-gradient-to-b from-primary/20 to-card border-primary/50"
-        }`}>
-          {/* Icon */}
-          <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${
-            impostorWins 
-              ? "bg-destructive/20" 
-              : "bg-primary/20"
+        <div className={`rounded-2xl p-8 text-center space-y-6 border ${impostorWins
+          ? "bg-gradient-to-b from-destructive/20 to-card border-destructive/50"
+          : "bg-gradient-to-b from-primary/20 to-card border-primary/50"
           }`}>
+          {/* Icon */}
+          <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${impostorWins
+            ? "bg-destructive/20"
+            : "bg-primary/20"
+            }`}>
             {impostorWins ? (
               <Eye className="w-12 h-12 text-destructive" />
             ) : (
@@ -36,24 +34,27 @@ export function ResultsView() {
 
           {/* Title */}
           <div className="space-y-2">
-            <h1 className={`text-3xl md:text-4xl font-bold text-balance ${
-              impostorWins ? "text-destructive" : "text-primary"
-            }`}>
+            <h1 className={`text-3xl md:text-4xl font-bold text-balance ${impostorWins ? "text-destructive" : "text-primary"
+              }`}>
               {impostorWins ? "¡EL IMPOSTOR HA GANADO!" : "¡IMPOSTOR ATRAPADO!"}
             </h1>
             <p className="text-muted-foreground">
-              {impostorWins 
-                ? "El impostor logró sobrevivir todas las rondas" 
+              {impostorWins
+                ? "El impostor logró sobrevivir todas las rondas"
                 : "Los jugadores identificaron al impostor"}
             </p>
+            {impostorName && (
+              <p className="text-xl font-bold mt-4 text-foreground">
+                El impostor era: <span className="text-destructive font-mono uppercase tracking-wider">{impostorName}</span>
+              </p>
+            )}
           </div>
 
           {/* Winner indicator */}
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-            impostorWins 
-              ? "bg-destructive/20 text-destructive" 
-              : "bg-primary/20 text-primary"
-          }`}>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${impostorWins
+            ? "bg-destructive/20 text-destructive"
+            : "bg-primary/20 text-primary"
+            }`}>
             {impostorWins ? (
               <>
                 <Skull className="w-4 h-4" />

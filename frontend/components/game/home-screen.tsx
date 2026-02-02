@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import { useGame } from "@/lib/game-context";
 import { Eye, Users, Loader2 } from "lucide-react";
 
@@ -12,6 +13,7 @@ export function HomeScreen() {
   const [username, setUsername] = useState("");
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [mode, setMode] = useState<"select" | "create" | "join">("select");
+  const [rounds, setRounds] = useState([3]); // Default 3 rounds, array for Slider
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +25,7 @@ export function HomeScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      await createRoom(username.trim());
+      await createRoom(username.trim(), rounds[0]);
     } catch {
       setError("Error al crear la sala. Intenta de nuevo.");
     } finally {
@@ -95,6 +97,23 @@ export function HomeScreen() {
                   maxLength={20}
                 />
               </div>
+
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-[color:var(--background)]">
+                  <label className="text-sm font-medium text-foreground">Rondas</label>
+                  <span className="text-sm font-bold text-primary">{rounds[0]}</span>
+                </div>
+                <Slider
+                  value={rounds}
+                  onValueChange={setRounds}
+                  max={10}
+                  min={1}
+                  step={1}
+                  className="py-4"
+                />
+              </div>
+
               {error && <p className="text-sm text-destructive">{error}</p>}
               <div className="flex gap-2">
                 <Button
@@ -166,6 +185,6 @@ export function HomeScreen() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

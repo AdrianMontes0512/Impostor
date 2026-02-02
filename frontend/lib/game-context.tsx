@@ -61,6 +61,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [currentRound, setCurrentRound] = useState(0);
+  const [maxRounds, setMaxRounds] = useState(3);
+  const [impostorName, setImpostorName] = useState<string | null>(null);
 
   // Private state
   const [myRole, setMyRole] = useState<PlayerRole | null>(null);
@@ -82,9 +85,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setPlayers(data.players);
         setGameState(data.gameState);
         setMessage(data.message);
+        if (data.currentRound !== undefined) setCurrentRound(data.currentRound);
+        if (data.maxRounds !== undefined) setMaxRounds(data.maxRounds);
+        if (data.impostorName) setImpostorName(data.impostorName);
 
         // Reset voting state on new round
-        if (["ROUND_1", "ROUND_2", "ROUND_3"].includes(data.gameState)) {
+        if (data.gameState === "VOTING") { // Updated for generic VOTING state
           setHasVoted(false);
           setSelectedVote(null);
         }
@@ -173,12 +179,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Create room
-  const createRoom = useCallback(async (name: string) => {
+  const createRoom = useCallback(async (name: string, rounds: number) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/game/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: name }),
+        body: JSON.stringify({ username: name, maxRounds: rounds }),
       });
 
       if (!response.ok) throw new Error("Failed to create room");
@@ -188,6 +194,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setPlayerId(data.players[0].id);
       setUsername(name);
       setIsHost(true);
+      setMaxRounds(rounds);
 
       await connectWebSocket(data.roomCode, data.players[0].id);
     } catch (error) {
@@ -209,11 +216,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
       setRoomCode(code);
-      setPlayerId(data.id);
+      // New structure: data = { player: {id, username,...}, room: {players: [...], ...} }
+      setPlayerId(data.player.id);
       setUsername(name);
       setIsHost(false);
 
-      await connectWebSocket(code, data.id);
+      // Initialize room state immediately from response
+      setPlayers(data.room.players);
+      setGameState(data.room.gameState);
+      if (data.room.message) setMessage(data.room.message);
+
+      await connectWebSocket(code, data.player.id);
     } catch (error) {
       console.error("[v0] Error joining room:", error);
       throw error;
@@ -294,7 +307,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setMessage("");
     setPlayerId(null);
     setUsername(null);
+    setPlayerId(null);
+    setUsername(null);
     setIsHost(false);
+    setCurrentRound(0);
+    setImpostorName(null);
     setMyRole(null);
     setCategory(null);
     setSecretWord(null);
@@ -335,6 +352,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     resetGame,
     setSelectedVote,
     leaveRoom,
+    currentRound,
+    maxRounds,
+    impostorName,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

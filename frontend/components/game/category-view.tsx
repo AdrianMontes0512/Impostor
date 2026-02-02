@@ -21,35 +21,8 @@ export function CategoryView() {
     }
   };
 
-  // Impostor waiting view
-  if (isImpostor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="py-12 text-center space-y-6">
-            <div className="w-20 h-20 mx-auto rounded-full bg-secondary flex items-center justify-center">
-              <Clock className="w-10 h-10 text-muted-foreground animate-pulse" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-foreground">Esperando...</h2>
-              <p className="text-muted-foreground">
-                Los jugadores están eligiendo una categoría
-              </p>
-            </div>
-            <div className="flex justify-center gap-1">
-              {[...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce"
-                  style={{ animationDelay: `${i * 0.2}s` }}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Removed Impostor check so everyone can submit a category
+
 
   // Player category input view
   return (

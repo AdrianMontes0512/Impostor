@@ -17,9 +17,9 @@ export function GameBoardView() {
     hasVoted,
     vote,
     confirmVote,
+    currentRound,
+    maxRounds,
   } = useGame();
-
-  const currentRound = gameState === "ROUND_1" ? 1 : gameState === "ROUND_2" ? 2 : 3;
   const isImpostor = myRole === "IMPOSTOR";
   const amISpectator = players.find(p => p.id === playerId)?.role === "SPECTATOR";
 
@@ -32,22 +32,21 @@ export function GameBoardView() {
       {/* Header with round indicator */}
       <div className="text-center py-4 space-y-2">
         <div className="flex justify-center gap-2">
-          {[1, 2, 3].map((round) => (
+          {Array.from({ length: maxRounds }, (_, i) => i + 1).map((round) => (
             <div
               key={round}
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
-                round === currentRound
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${round === currentRound
                   ? "bg-primary text-primary-foreground scale-110"
                   : round < currentRound
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-secondary text-secondary-foreground"
-              }`}
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
             >
               {round}
             </div>
           ))}
         </div>
-        <p className="text-lg font-semibold text-foreground">Ronda {currentRound} de 3</p>
+        <p className="text-lg font-semibold text-foreground">Ronda {currentRound} de {maxRounds}</p>
       </div>
 
       {/* Category and Word info */}
@@ -90,19 +89,17 @@ export function GameBoardView() {
             return (
               <div
                 key={player.id}
-                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                  isSelected
+                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isSelected
                     ? "bg-accent/20 border-accent"
                     : "bg-secondary/50 border-border/50 hover:bg-secondary"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      isMe
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${isMe
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     <User className="w-5 h-5" />
                   </div>
