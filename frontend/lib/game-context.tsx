@@ -64,6 +64,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [currentRound, setCurrentRound] = useState(0);
   const [maxRounds, setMaxRounds] = useState(3);
   const [impostorName, setImpostorName] = useState<string | null>(null);
+  const [firstSpeakerId, setFirstSpeakerId] = useState<string | null>(null);
+  const [isTieBreaker, setIsTieBreaker] = useState(false);
+  const [tiedPlayerIds, setTiedPlayerIds] = useState<string[]>([]);
+  // Track previous tie-breaker state to detect transitions
+  const wasTieBreakerRef = useRef(false);
 
   // Private state
   const [myRole, setMyRole] = useState<PlayerRole | null>(null);
@@ -88,11 +93,54 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (data.currentRound !== undefined) setCurrentRound(data.currentRound);
         if (data.maxRounds !== undefined) setMaxRounds(data.maxRounds);
         if (data.impostorName) setImpostorName(data.impostorName);
+        if (data.firstSpeakerId) setFirstSpeakerId(data.firstSpeakerId);
 
-        // Reset voting state on new round
-        if (data.gameState === "VOTING") { // Updated for generic VOTING state
-          setHasVoted(false);
-          setSelectedVote(null);
+        const newIsTieBreaker = !!data.isTieBreaker;
+        setIsTieBreaker(newIsTieBreaker);
+        setTiedPlayerIds(data.tiedPlayerIds || []);
+
+        // Logic to reset voting state
+        if (data.gameState === "VOTING") {
+          // 1. Transition into Tie-Breaker: Reset if we weren't in one before
+          if (newIsTieBreaker && !wasTieBreakerRef.current) {
+            console.log("[GameContext] Entering Tie-Breaker: Resetting vote.");
+            setHasVoted(false);
+            setSelectedVote(null);
+          }
+
+          // 2. Transition OUT of Tie-Breaker (Resolved): Reset if we were in one and now are not
+          if (!newIsTieBreaker && wasTieBreakerRef.current) {
+            console.log("[GameContext] Exiting Tie-Breaker: Resetting vote for result/next round.");
+            setHasVoted(false);
+            setSelectedVote(null);
+          }
+
+          // 3. New Round Check: If round changed, reset.
+          // We need to track previous round to detect this efficiently here, 
+          // or rely on the fact that exiting tie breaker covers one case, and 
+          // normal round progression covers the other. 
+
+          // Actually, if we just rely on round number change in a useEffect, that's cleaner. 
+          // But let's verify if exiting tie-breaker is enough for now. 
+          // If we go Tie -> Tie (Random Eject) -> Next Round (Voting), 
+          // isTieBreaker goes true -> false. So point 2 covers it!
+
+          // What about Normal Voting -> Next Round Voting (No Tie)?
+          // isTieBreaker is false -> false. Point 2 doesn't cover it.
+          // We need to reset on round change. 
+        }
+
+        // Update ref for next render
+        wasTieBreakerRef.current = newIsTieBreaker;
+
+        if (data.gameState === "VOTING" && !newIsTieBreaker && wasTieBreakerRef.current) {
+          // We just exited a tie breaker (resolved). 
+          // Typically this means we go to next round or someone ejected.
+          // If we stay in voting (e.g. next round), hasVoted should be false.
+          // But if we go to results??
+          // Let's rely on the round change observation or explicit messages.
+          // But for safety, if we exited tie-breaker to a normal voting round:
+          // (Wait, do we exit tie breaker to normal voting? No, usually next round starts)
         }
       });
 
@@ -312,6 +360,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setIsHost(false);
     setCurrentRound(0);
     setImpostorName(null);
+    setFirstSpeakerId(null);
+    setIsTieBreaker(false);
+    wasTieBreakerRef.current = false;
+    setTiedPlayerIds([]);
     setMyRole(null);
     setCategory(null);
     setSecretWord(null);
@@ -327,6 +379,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  // Reset voting on round change
+  useEffect(() => {
+    if (gameState === "VOTING") {
+      console.log("[GameContext] Round changed or GameState set to VOTING: Resetting vote.");
+      setHasVoted(false);
+      setSelectedVote(null);
+    }
+  }, [currentRound]); // Depend on currentRound to trigger reset on new round
 
   const value: GameContextType = {
     isConnected,
@@ -355,6 +416,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     currentRound,
     maxRounds,
     impostorName,
+    firstSpeakerId,
+    isTieBreaker,
+    tiedPlayerIds,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

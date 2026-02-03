@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGame } from "@/lib/game-context";
-import { Vote, Check, User, Ghost, Eye } from "lucide-react";
+import { Vote, Check, User, Ghost, Eye, Megaphone } from "lucide-react";
 
 export function GameBoardView() {
   const {
@@ -19,12 +19,19 @@ export function GameBoardView() {
     confirmVote,
     currentRound,
     maxRounds,
+    firstSpeakerId,
+    isTieBreaker,
+    tiedPlayerIds,
   } = useGame();
   const isImpostor = myRole === "IMPOSTOR";
   const amISpectator = players.find(p => p.id === playerId)?.role === "SPECTATOR";
 
   // Filter alive players (not spectators)
   const alivePlayers = players.filter((p) => p.role !== "SPECTATOR");
+
+  // Voting list: Show all alive players. Visual indication will be handled in the list item.
+  const votingCandidates = alivePlayers;
+
   const spectators = players.filter((p) => p.role === "SPECTATOR");
 
   return (
@@ -36,18 +43,25 @@ export function GameBoardView() {
             <div
               key={round}
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${round === currentRound
-                  ? "bg-primary text-primary-foreground scale-110"
-                  : round < currentRound
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-secondary text-secondary-foreground"
+                ? "bg-primary text-primary-foreground scale-110"
+                : round < currentRound
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-secondary text-secondary-foreground"
                 }`}
             >
               {round}
             </div>
           ))}
         </div>
-        <p className="text-lg font-semibold text-foreground">Ronda {currentRound} de {maxRounds}</p>
       </div>
+      {isTieBreaker ? (
+        <div className="animate-pulse">
+          <p className="text-lg font-bold text-yellow-500 uppercase tracking-widest">⚠️ Ronda de Desempate ⚠️</p>
+          <p className="text-sm text-muted-foreground">Se requiere un nuevo voto</p>
+        </div>
+      ) : (
+        <p className="text-lg font-semibold text-foreground">Ronda {currentRound} de {maxRounds}</p>
+      )}
 
       {/* Category and Word info */}
       <Card className="mb-4 border-border/50 bg-card/80 backdrop-blur">
@@ -78,11 +92,20 @@ export function GameBoardView() {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2 text-foreground">
             <Vote className="w-5 h-5 text-primary" />
-            {amISpectator ? "Observando votación" : "Vota por el sospechoso"}
+            {amISpectator
+              ? "Observando votación"
+              : isTieBreaker
+                ? "¡Empate! Vota por el desempate"
+                : "Vota por el sospechoso"}
           </CardTitle>
+          {isTieBreaker && (
+            <p className="text-sm text-yellow-500 font-medium px-4">
+              Solo puedes votar por los jugadores empatados.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
-          {alivePlayers.map((player) => {
+          {votingCandidates.map((player) => {
             const isMe = player.id === playerId;
             const isSelected = selectedVote === player.id;
 
@@ -90,25 +113,38 @@ export function GameBoardView() {
               <div
                 key={player.id}
                 className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isSelected
-                    ? "bg-accent/20 border-accent"
-                    : "bg-secondary/50 border-border/50 hover:bg-secondary"
+                  ? "bg-accent/20 border-accent"
+                  : "bg-secondary/50 border-border/50 hover:bg-secondary"
                   }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${isMe
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
                       }`}
                   >
                     <User className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">
+                    <p className="font-medium text-foreground flex items-center gap-2">
                       {player.username}
-                      {isMe && <span className="text-xs text-muted-foreground ml-2">(Tú)</span>}
+                      {isMe && <span className="text-xs text-muted-foreground">(Tú)</span>}
+                      {isTieBreaker && !tiedPlayerIds.includes(player.id) && (
+                        <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border">
+                          SALVADO
+                        </span>
+                      )}
                     </p>
-                    <p className="text-xs text-primary">En juego</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-primary">En juego</p>
+                      {firstSpeakerId === player.id && (
+                        <span className="flex items-center gap-1 text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-500/30">
+                          <Megaphone className="w-3 h-3" />
+                          1° Hablante
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {!isMe && !hasVoted && !amISpectator && (
@@ -116,10 +152,13 @@ export function GameBoardView() {
                     variant={isSelected ? "default" : "outline"}
                     size="sm"
                     onClick={() => vote(player.id)}
+                    disabled={isTieBreaker && !tiedPlayerIds.includes(player.id)}
                     className={
                       isSelected
                         ? "bg-accent text-accent-foreground"
-                        : "border-border hover:bg-accent/20"
+                        : isTieBreaker && !tiedPlayerIds.includes(player.id)
+                          ? "opacity-50 cursor-not-allowed border-border"
+                          : "border-border hover:bg-accent/20"
                     }
                   >
                     {isSelected ? <Check className="w-4 h-4" /> : "Votar"}
@@ -154,27 +193,29 @@ export function GameBoardView() {
       </Card>
 
       {/* Confirm vote button */}
-      {!amISpectator && (
-        <div className="mt-4">
-          {hasVoted ? (
-            <div className="text-center py-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary">
-                <Check className="w-4 h-4" />
-                Voto enviado. Esperando a los demás...
+      {
+        !amISpectator && (
+          <div className="mt-4">
+            {hasVoted ? (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary">
+                  <Check className="w-4 h-4" />
+                  Voto enviado. Esperando a los demás...
+                </div>
               </div>
-            </div>
-          ) : (
-            <Button
-              onClick={confirmVote}
-              disabled={!selectedVote}
-              className="w-full h-14 text-lg bg-accent hover:bg-accent/90 text-accent-foreground disabled:opacity-50"
-            >
-              <Vote className="w-5 h-5 mr-2" />
-              Confirmar Voto
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+            ) : (
+              <Button
+                onClick={confirmVote}
+                disabled={!selectedVote}
+                className="w-full h-14 text-lg bg-accent hover:bg-accent/90 text-accent-foreground disabled:opacity-50"
+              >
+                <Vote className="w-5 h-5 mr-2" />
+                Confirmar Voto
+              </Button>
+            )}
+          </div>
+        )
+      }
+    </div >
   );
 }

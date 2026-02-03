@@ -24,6 +24,9 @@ export interface RoomStatusDTO {
   currentRound?: number;
   maxRounds?: number;
   impostorName?: string;
+  firstSpeakerId?: string;
+  isTieBreaker?: boolean;
+  tiedPlayerIds?: string[];
 }
 
 export interface PrivatePlayerStateDTO {
@@ -68,6 +71,9 @@ export interface GameContextType {
   currentRound: number;
   maxRounds: number;
   impostorName: string | null;
+  firstSpeakerId: string | null;
+  isTieBreaker: boolean;
+  tiedPlayerIds: string[];
 
   // Player state
   playerId: string | null;
