@@ -21,7 +21,7 @@ import SockJS from 'sockjs-client';
 import { Stomp } from 'stompjs/lib/stomp.js';
 import { Client } from '@stomp/stompjs';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://136.159.204.151:3001";
 
 // Enable simulation mode when backend is not available
 const SIMULATION_MODE = !process.env.NEXT_PUBLIC_BACKEND_URL;
